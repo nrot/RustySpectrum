@@ -6,7 +6,7 @@ pub enum ExistsFunc{
     GraySmooth
 }
 
-pub fn get_function(s: ExistsFunc)->ColorFunc{
+pub fn get_function(s: &ExistsFunc)->ColorFunc{
     match s {
         ExistsFunc::RGBSmooth => smooth_gradient,
         ExistsFunc::GraySmooth => smooth_gradient_gray,
@@ -48,4 +48,14 @@ pub fn smooth_gradient(v: f32, alpha: u8, max: f32, dst: &mut [u8]) {
         _ => {dst[0] = v;    dst[1]= vmin; dst[2] = vdec; dst[3] = alpha;},
         // _ => panic!("Out of range color"),
     };
+}
+
+#[inline(always)]
+pub fn blend_color(color: &[u8; 4], dst: &mut [u8; 4]){
+    *dst = [
+        color[0] / 2 + dst[0] / 2,
+        color[1] / 2 + dst[1] / 2,
+        color[2] / 2 + dst[2] / 2,
+        color[3] / 2 + dst[3] / 2,
+    ]
 }
