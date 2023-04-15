@@ -1,6 +1,6 @@
 # RustySpectrum
 
-A simple app for draws spectrum on image.
+A simple app for draws spectrum on image. Each pixel on image is FFT value . Each row is FFT set. On default: swaps FIFTH part to move zero frequency to center (see freq-centered).
 # Support only cf32 input format and png output format.
 
 ```
