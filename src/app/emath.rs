@@ -111,7 +111,10 @@ const MATH_FUNCTIONS: &[(&str, ResolverFunc)] = &[
 pub fn add_math(e: resolver::Expr) -> resolver::Expr {
     let mut e = e;
     for (name, f) in MATH_FUNCTIONS {
-        e = e.function(*name, f);
+        e = e.const_function(*name, *f);
     }
     e
 }
+//Before const func: Take time: 42.08s
+//After : Take time: 40.24s
+//Rc after: Take time: 28.45s
