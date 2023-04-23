@@ -8,17 +8,19 @@ pub enum DisplayFun{
     Norm, 
     Real,
     Image,
-    Custom
 }
 
 pub const DISPLAY_FN_NAME: &str = "convert";
 
-pub fn get_display_fun(s: &DisplayFun, custom: String)->String{
-    match s {
-        DisplayFun::Norm => "fn convert(re, im) {hypot(re, im)}".into(),
-        DisplayFun::Real => "fn convert(re, im) {re}".into(),
-        DisplayFun::Image => "fm convert(re, im) {im}".into(),
-        DisplayFun::Custom => custom,
+pub fn get_display_fun(s: &DisplayFun, custom: Option<String>)->String{
+    if let Some(s) = custom{
+        s
+    } else {
+        match s {
+            DisplayFun::Norm => "fn convert(re, im) {hypot(re, im)}".into(),
+            DisplayFun::Real => "fn convert(re, im) {re}".into(),
+            DisplayFun::Image => "fm convert(re, im) {im}".into(),
+        }
     }
 }
 

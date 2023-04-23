@@ -59,4 +59,5 @@ pub fn add_math(e: &mut rhai::Engine) {
 //Before const func: Take time: 42.08s
 //After : Take time: 40.24s
 //Rc after: Take time: 28.45s
-//Rhai call convert: Take time: 14.17s 
+//Rhai Hypot each iter call convert: Take time: 14.17s
+//Rhai (re + im)/2 each iter call convert: Take time: 6.17s

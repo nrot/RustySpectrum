@@ -5,8 +5,8 @@ use std::{io::Read, path::PathBuf};
 
 mod colors;
 mod display;
-mod file_format;
 mod emath;
+mod file_format;
 
 #[allow(unused_imports)]
 use log::{debug, info, trace, warn};
@@ -21,7 +21,7 @@ pub struct App {
     color_fun: colors::ColorFunc,
     display_fun: rhai::AST,
     rhai_engine: rhai::Engine,
-    rhai_scope: rhai::Scope<'static>
+    rhai_scope: rhai::Scope<'static>,
 }
 
 #[derive(Parser, Debug)]
@@ -100,16 +100,15 @@ struct Args {
     #[clap(
         long,
         default_value = "norm",
-        help = "Function for display each FFT complex value; Custom must set custom-function"
+        help = "Function for display each FFT complex value; For Custom must set custom-function"
     )]
     display_func: display::DisplayFun,
 
     #[clap(
         long,
-        default_value = "",
-        help = "Custom eval function for display function. Have one value complex<f64>{re, im}; Requered f64 output; Have some math functions"
+        help = "Custom eval function for display function. Requered fn convert(re, im) {<THIS YOU CODE>}; Requered f64 output; Have some math functions"
     )]
-    custom_function: String,
+    custom_function: Option<String>,
 
     #[clap(long, default_value = "0", help = "Sample count limit")]
     sample_limit: usize,
@@ -137,15 +136,16 @@ impl App {
             args.custom_function.clone(),
         ))?;
         let mut scope = rhai::Scope::new();
-        let _ = rhai_engine.call_fn::<f64>(&mut scope, &display_fun, DISPLAY_FN_NAME, (0.0, 0.0)).unwrap();
-        
+        let _ = rhai_engine
+            .call_fn::<f64>(&mut scope, &display_fun, DISPLAY_FN_NAME, (0.0, 0.0)).unwrap();
+
         Ok(Self {
             args,
             data: Vec::with_capacity(4096),
             color_fun,
             display_fun,
             rhai_engine,
-            rhai_scope: scope
+            rhai_scope: scope,
         })
     }
 
@@ -257,7 +257,15 @@ impl App {
             let mut tmp = 0.0;
             for c in self.data.iter() {
                 // tmp = App::eval_func(self.display_fun.clone(), c)?;
-                tmp = self.rhai_engine.call_fn(&mut self.rhai_scope, &self.display_fun, DISPLAY_FN_NAME, (c.re, c.im)).unwrap();
+                tmp = self
+                    .rhai_engine
+                    .call_fn(
+                        &mut self.rhai_scope,
+                        &self.display_fun,
+                        DISPLAY_FN_NAME,
+                        (c.re, c.im),
+                    )
+                    .unwrap();
                 if tmp < mn {
                     mn = tmp;
                 }
@@ -285,7 +293,15 @@ impl App {
             c.re -= self.args.fft_clamp_min;
             c.im -= self.args.fft_clamp_min;
             // v = App::eval_func(self.display_fun.clone(), c)?;
-            v = self.rhai_engine.call_fn(&mut self.rhai_scope, &self.display_fun, DISPLAY_FN_NAME, (c.re, c.im)).unwrap();
+            v = self
+                .rhai_engine
+                .call_fn(
+                    &mut self.rhai_scope,
+                    &self.display_fun,
+                    DISPLAY_FN_NAME,
+                    (c.re, c.im),
+                )
+                .unwrap();
             //.clamp(self.args.fft_clamp_min, self.args.fft_clamp_max);
             let mut x = (i % self.args.fft_size) as u32;
             let y = (i / self.args.fft_size) as u32;
