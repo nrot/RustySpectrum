@@ -3,7 +3,7 @@ use log::info;
 mod app;
 
 fn main() {
-    let mut application = app::App::new();
+    let mut application = app::App::new().unwrap();
     init_logs(application.log_level_filter());
     let time = std::time::Instant::now();
     application.run().unwrap();

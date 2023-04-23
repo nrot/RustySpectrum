@@ -12,7 +12,7 @@ use log::{debug, info, trace, warn};
 
 use crate::app::file_format::FormatError;
 
-use self::file_format::FileFormat;
+use self::{display::ComplexEval, file_format::FileFormat};
 
 pub struct App {
     args: Args,
@@ -97,19 +97,24 @@ struct Args {
     #[clap(
         long,
         default_value = "norm",
-        help = "Function for display each FFT complex value"
+        help = "Function for display each FFT complex value; Custom must set custom-function"
     )]
     display_func: display::DisplayFun,
+
+    #[clap(
+        long,
+        default_value = "",
+        help = "Custom eval function for display function. Have one value complex<f64>{re, im}; Requered f64 output; Have some math functions"
+    )]
+    custom_function: String,
 
     #[clap(long, default_value = "0", help = "Sample count limit")]
     sample_limit: usize,
 
-    #[clap(long, help="File format; Default fc32")]
-    format: Option<FileFormat>
-    //TODO: Diff file formats
-    //TODO: Diff ouput file formats
+    #[clap(long, help = "File format; Default fc32")]
+    format: Option<FileFormat>, //TODO: Diff file formats
+                                //TODO: Diff ouput file formats
 }
-
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default)]
 pub enum FreqCentered {
@@ -118,18 +123,21 @@ pub enum FreqCentered {
     Original,
 }
 
-
 impl App {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self> {
         let args = Args::parse();
         let color_fun = colors::get_function(&args.colors);
-        let display_fun = display::get_display_fun(&args.display_func);
-        Self {
+        let display_fun = display::add_math(display::get_display_fun(
+            &args.display_func,
+            args.custom_function.clone(),
+        ))
+        .compile()?;
+        Ok(Self {
             args,
             data: Vec::with_capacity(4096),
             color_fun,
             display_fun,
-        }
+        })
     }
 
     pub fn log_level_filter(&self) -> log::LevelFilter {
@@ -143,7 +151,7 @@ impl App {
 
         self.fft();
 
-        self.post_fft();
+        self.post_fft()?;
 
         self.save_fft_to_image()?;
 
@@ -151,11 +159,12 @@ impl App {
     }
 
     fn read_file(&mut self) -> Result<()> {
-        let file_format = if let Some(format) = self.args.format{
+        let mut file = std::fs::File::open(self.args.source.clone())?;
+        let file_format = if let Some(format) = self.args.format {
             format
-        } else if let Some(ff) = self.args.source.extension(){
+        } else if let Some(ff) = self.args.source.extension() {
             match ff.to_ascii_lowercase().to_str() {
-                Some(ff) => match ff{
+                Some(ff) => match ff {
                     "cf32" | "cfile" => FileFormat::Cf32,
                     "cf64" => FileFormat::Cf64,
                     "cs32" => FileFormat::Cs32,
@@ -167,9 +176,19 @@ impl App {
                     "s16" => FileFormat::S16,
                     "s8" => FileFormat::S16,
                     "u8" => FileFormat::U8,
-                    f => return Err(FormatError{find_format: String::from(f)}.into()),
+                    f => {
+                        return Err(FormatError {
+                            find_format: String::from(f),
+                        }
+                        .into())
+                    }
                 },
-                None => return Err(FormatError{find_format: String::from(ff.to_string_lossy())}.into()),
+                None => {
+                    return Err(FormatError {
+                        find_format: String::from(ff.to_string_lossy()),
+                    }
+                    .into())
+                }
             }
         } else {
             FileFormat::default()
@@ -177,7 +196,6 @@ impl App {
         info!("Used file format: {:?}", file_format);
         let sample_size = file_format.sample_size();
         debug!("Sample size: {}", sample_size);
-        let mut file = std::fs::File::open(self.args.source.clone())?;
         if self.args.byte_offset > 0 {
             let mut readed = 0;
             let mut buf = [0u8; 1];
@@ -221,26 +239,28 @@ impl App {
         fft.process(&mut self.data);
     }
 
-    fn post_fft(&mut self) {
+    fn post_fft(&mut self) -> Result<()> {
         if self.args.smart_fft_clamp {
             info!("Chosen smart FFT clamp; max/min-fft-value ignore");
             let mut mn = f64::MAX;
             let mut mx = -f64::MAX;
+            #[allow(unused_assignments)]
             let mut tmp = 0.0;
-            self.data.iter().for_each(|c| {
-                tmp = (self.display_fun)(c);
+            for c in self.data.iter() {
+                tmp = App::eval_func(self.display_fun.clone(), c)?;
                 if tmp < mn {
                     mn = tmp;
                 }
                 if tmp > mx {
                     mx = tmp;
                 }
-            });
+            }
             self.args.fft_clamp_min = mn;
             self.args.fft_clamp_max = mx + mn.abs();
             info!("Min fft: {}; Max fft: {}", mn, mx);
         }
         debug!("Max fft value: {}", self.args.fft_clamp_max);
+        Ok(())
     }
 
     fn save_fft_to_image(&mut self) -> Result<()> {
@@ -249,11 +269,12 @@ impl App {
             image::ImageBuffer::<image::Rgba<u8>, _>::new(self.args.fft_size as u32, height as u32);
         let mut buff = [0u8; 4];
         let size_fft = self.args.fft_size as u32;
+        #[allow(unused_assignments)]
         let mut v = 0.0;
-        self.data.iter_mut().enumerate().for_each(|(i, c)| {
+        for (i, c) in self.data.iter_mut().enumerate() {
             c.re -= self.args.fft_clamp_min;
             c.im -= self.args.fft_clamp_min;
-            v = (self.display_fun)(c);
+            v = App::eval_func(self.display_fun.clone(), c)?;
             //.clamp(self.args.fft_clamp_min, self.args.fft_clamp_max);
             let mut x = (i % self.args.fft_size) as u32;
             let y = (i / self.args.fft_size) as u32;
@@ -268,9 +289,20 @@ impl App {
                 colors::blend_color(&[224, 0, 209, 0xff], &mut buff);
             }
             img.put_pixel(x, y, image::Rgba(buff));
-        });
+        }
 
         img.save_with_format(self.args.output.clone(), image::ImageFormat::Png)?;
         Ok(())
+    }
+
+    #[inline(always)]
+    fn eval_func(display_fun: resolver::Expr, c: &Complex<f64>) -> Result<f64> {
+        match display_fun.value("c", ComplexEval::from(*c)).exec()? {
+            resolver::Value::Number(v) => match v.as_f64() {
+                Some(v) => Ok(v),
+                None => Err(resolver::Error::Custom("Number must have convert to f64".into()).into()),
+            },
+            _ => Err(resolver::Error::ExpectedNumber.into()),
+        }
     }
 }
