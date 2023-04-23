@@ -21,22 +21,42 @@ Arguments:
   <SOURCE>  Source cf32 file
 
 Options:
-  -o, --output <OUTPUT>                Output png file path [default: spectrum.png]
-  -f, --fft-size <FFT_SIZE>            FFT size [default: 1024]
-  -v, --verbose...                     More output per occurrence
-  -q, --quiet...                       Less output per occurrence
-  -c, --colors <COLORS>                Color scheme function [default: rgb-smooth] [possible values: rgb-smooth, gray-smooth]
-      --fft-clamp-min <FFT_CLAMP_MIN>  Value for added to each complex number [default: 0.0]
-      --fft-clamp-max <FFT_CLAMP_MAX>  Value for color function. Example: Gray color scheme black==0.0, white==max value [default: 1.0]
-  -s, --smart-fft-clamp                Searched min and max value for all complex data. Use 'display function' for searching
-  -n, --normalize-fft                  Normalize fft. Each complex value divide fft-size
-      --central-line                   Draws purple central line
-      --freq-centered <FREQ_CENTERED>  Default main freq moved to center. Original draws raw fft [default: moved-fft] [possible values: moved-fft, original]
-      --byte-offset <BYTE_OFFSET>      Offset bytes from beginning of file [default: 0]
-      --display-func <DISPLAY_FUNC>    Function for display each FFT complex value [default: norm] [possible values: norm, real, image]
-      --sample-limit <SAMPLE_LIMIT>    Sample count limit [default: 0]
-  -h, --help                           Print help
-  -V, --version                        Print version
+  -o, --output <OUTPUT>
+          Output png file path [default: spectrum.png]
+  -f, --fft-size <FFT_SIZE>
+          FFT size [default: 1024]
+  -v, --verbose...
+          More output per occurrence
+  -q, --quiet...
+          Less output per occurrence
+  -c, --colors <COLORS>
+          Color scheme function [default: rgb-smooth] [possible values: rgb-smooth, gray-smooth]
+      --fft-clamp-min <FFT_CLAMP_MIN>
+          Value for added to each complex number [default: 0.0]
+      --fft-clamp-max <FFT_CLAMP_MAX>
+          Value for color function. Example: Gray color scheme black==0.0, white==max value [default: 1.0]
+  -s, --smart-fft-clamp
+          Searched min and max value for all complex data. Use 'display function' for searching
+  -n, --normalize-fft
+          Normalize fft. Each complex value divide fft-size
+      --central-line
+          Draws purple central line
+      --freq-centered <FREQ_CENTERED>
+          Default main freq moved to center. Original draws raw fft [default: moved-fft] [possible values: moved-fft, original]
+      --byte-offset <BYTE_OFFSET>
+          Offset bytes from beginning of file [default: 0]
+      --display-func <DISPLAY_FUNC>
+          Function for display each FFT complex value; For Custom must set custom-function [default: norm] [possible values: norm, real, image]
+      --custom-function <CUSTOM_FUNCTION>
+          Custom eval function for display function. Requered fn convert(re, im) {<THIS YOU CODE>}; Requered f64 output; Have some math functions
+      --sample-limit <SAMPLE_LIMIT>
+          Sample count limit [default: 0]
+      --format <FORMAT>
+          File format; Default fc32 [possible values: cf32, cf64, cs32, cs16, cs8, cu8, f32, f64, s16, s8, u8]
+  -h, --help
+          Print help
+  -V, --version
+          Print version
 ```
 
 ## Build from source
