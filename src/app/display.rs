@@ -2,7 +2,7 @@ use clap::ValueEnum;
 use rustfft::num_complex::Complex;
 
 
-pub type ComplexDisplay = fn(&Complex<f32>)->f32;
+pub type ComplexDisplay = fn(&Complex<f64>)->f64;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default)]
 pub enum DisplayFun{
@@ -20,14 +20,14 @@ pub fn get_display_fun(s: &DisplayFun)->ComplexDisplay{
     }
 }
 
-fn norm_display(s: &Complex<f32>)->f32{
+fn norm_display(s: &Complex<f64>)->f64{
     s.norm()
 }
 
-fn real_display(s: &Complex<f32>)->f32{
+fn real_display(s: &Complex<f64>)->f64{
     s.re
 }
 
-fn image_display(s: &Complex<f32>)->f32{
+fn image_display(s: &Complex<f64>)->f64{
     s.im
 }

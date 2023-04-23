@@ -13,10 +13,10 @@ pub fn get_function(s: &ExistsFunc)->ColorFunc{
     }
 }
 
-pub type ColorFunc = fn( f32, u8, f32, &mut [u8]);
+pub type ColorFunc = fn( f64, u8, f64, &mut [u8]);
 
 #[inline(always)]
-pub fn smooth_gradient_gray(v: f32, alpha: u8, max: f32, dst: &mut [u8]) {
+pub fn smooth_gradient_gray(v: f64, alpha: u8, max: f64, dst: &mut [u8]) {
     let c = (v / max * 255.0) as u8;
     unsafe{
         std::ptr::write_bytes(dst.as_mut_ptr(), c, 3);
@@ -26,7 +26,7 @@ pub fn smooth_gradient_gray(v: f32, alpha: u8, max: f32, dst: &mut [u8]) {
 
 #[rustfmt::skip]
 #[inline(always)]
-pub fn smooth_gradient(v: f32, alpha: u8, max: f32, dst: &mut [u8]) {
+pub fn smooth_gradient(v: f64, alpha: u8, max: f64, dst: &mut [u8]) {
     let x = v / max;
     let h = (-150.0 * x + 237.0).clamp(0.0, 240.0);
     // let h = (88.0 * x.powi(2) - 302.0 * x + 239.0).clamp(0.0, 240.0);

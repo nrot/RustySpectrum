@@ -5,16 +5,20 @@ use std::{io::Read, path::PathBuf};
 
 mod colors;
 mod display;
+mod file_format;
 
 #[allow(unused_imports)]
 use log::{debug, info, trace, warn};
 
+use crate::app::file_format::FormatError;
+
+use self::file_format::FileFormat;
+
 pub struct App {
     args: Args,
-    data: Vec<Complex<f32>>,
+    data: Vec<Complex<f64>>,
     color_fun: colors::ColorFunc,
     display_fun: display::ComplexDisplay,
-    sample_size: usize,
 }
 
 #[derive(Parser, Debug)]
@@ -50,14 +54,14 @@ struct Args {
         default_value = "0.0",
         help = "Value for added to each complex number"
     )]
-    fft_clamp_min: f32,
+    fft_clamp_min: f64,
 
     #[clap(
         long,
         default_value = "1.0",
         help = "Value for color function. Example: Gray color scheme black==0.0, white==max value"
     )]
-    fft_clamp_max: f32,
+    fft_clamp_max: f64,
 
     #[clap(
         short,
@@ -99,9 +103,13 @@ struct Args {
 
     #[clap(long, default_value = "0", help = "Sample count limit")]
     sample_limit: usize,
+
+    #[clap(long, help="File format; Default fc32")]
+    format: Option<FileFormat>
     //TODO: Diff file formats
     //TODO: Diff ouput file formats
 }
+
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default)]
 pub enum FreqCentered {
@@ -109,6 +117,7 @@ pub enum FreqCentered {
     MovedFFT,
     Original,
 }
+
 
 impl App {
     pub fn new() -> Self {
@@ -119,7 +128,6 @@ impl App {
             args,
             data: Vec::with_capacity(4096),
             color_fun,
-            sample_size: 8,
             display_fun,
         }
     }
@@ -143,6 +151,32 @@ impl App {
     }
 
     fn read_file(&mut self) -> Result<()> {
+        let file_format = if let Some(format) = self.args.format{
+            format
+        } else if let Some(ff) = self.args.source.extension(){
+            match ff.to_ascii_lowercase().to_str() {
+                Some(ff) => match ff{
+                    "cf32" | "cfile" => FileFormat::Cf32,
+                    "cf64" => FileFormat::Cf64,
+                    "cs32" => FileFormat::Cs32,
+                    "cs16" => FileFormat::Cs16,
+                    "cs8" => FileFormat::Cs8,
+                    "cu8" => FileFormat::Cu8,
+                    "f32" => FileFormat::F32,
+                    "f64" => FileFormat::F64,
+                    "s16" => FileFormat::S16,
+                    "s8" => FileFormat::S16,
+                    "u8" => FileFormat::U8,
+                    f => return Err(FormatError{find_format: String::from(f)}.into()),
+                },
+                None => return Err(FormatError{find_format: String::from(ff.to_string_lossy())}.into()),
+            }
+        } else {
+            FileFormat::default()
+        };
+        info!("Used file format: {:?}", file_format);
+        let sample_size = file_format.sample_size();
+        debug!("Sample size: {}", sample_size);
         let mut file = std::fs::File::open(self.args.source.clone())?;
         if self.args.byte_offset > 0 {
             let mut readed = 0;
@@ -154,21 +188,15 @@ impl App {
                 }
             }
         }
-        let mut buf = vec![0; self.sample_size];
+        let mut buf = vec![0; sample_size];
         while let Ok(n) = file.read(&mut buf) {
-            if n != self.sample_size {
+            if n != sample_size {
                 break;
             }
             if self.args.sample_limit > 0 && self.data.len() >= self.args.sample_limit {
                 break;
             }
-            let re = f32::from_le_bytes(buf[0..(self.sample_size / 2)].try_into().unwrap());
-            let im = f32::from_le_bytes(
-                buf[(self.sample_size / 2)..self.sample_size]
-                    .try_into()
-                    .unwrap(),
-            );
-            self.data.push(Complex { re, im });
+            self.data.push(file_format.covert(&buf));
         }
 
         Ok(())
@@ -196,8 +224,8 @@ impl App {
     fn post_fft(&mut self) {
         if self.args.smart_fft_clamp {
             info!("Chosen smart FFT clamp; max/min-fft-value ignore");
-            let mut mn = f32::MAX;
-            let mut mx = -f32::MAX;
+            let mut mn = f64::MAX;
+            let mut mx = -f64::MAX;
             let mut tmp = 0.0;
             self.data.iter().for_each(|c| {
                 tmp = (self.display_fun)(c);
