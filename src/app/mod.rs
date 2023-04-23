@@ -6,6 +6,7 @@ use std::{io::Read, path::PathBuf};
 mod colors;
 mod display;
 mod file_format;
+mod emath;
 
 #[allow(unused_imports)]
 use log::{debug, info, trace, warn};
@@ -127,7 +128,7 @@ impl App {
     pub fn new() -> Result<Self> {
         let args = Args::parse();
         let color_fun = colors::get_function(&args.colors);
-        let display_fun = display::add_math(display::get_display_fun(
+        let display_fun = emath::add_math(display::get_display_fun(
             &args.display_func,
             args.custom_function.clone(),
         ))
@@ -297,7 +298,7 @@ impl App {
 
     #[inline(always)]
     fn eval_func(display_fun: resolver::Expr, c: &Complex<f64>) -> Result<f64> {
-        match display_fun.value("c", ComplexEval::from(*c)).exec()? {
+        match emath::add_math(display_fun).value("c", ComplexEval::from(*c)).exec()? {
             resolver::Value::Number(v) => match v.as_f64() {
                 Some(v) => Ok(v),
                 None => Err(resolver::Error::Custom("Number must have convert to f64".into()).into()),
