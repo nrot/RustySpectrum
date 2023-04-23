@@ -1,120 +1,62 @@
-macro_rules! get_arguments {
-    ($nw:ident, $v:ident, $index:expr, $mx:expr) => {
-        let Some($nw) = $v.get($index) else {
-                    return Err(resolver::Error::ArgumentsLess($mx));
-                };
-    };
+fn sqrt(v: f64) -> f64 {
+    v.sqrt()
 }
 
-macro_rules! get_f64 {
-    ($nw:ident, $v:ident) => {
-        let resolver::Value::Number(tmp_value_98312774) = $v else {
-                    return Err(resolver::Error::ExpectedNumber);
-                };
-        let Some($nw) = tmp_value_98312774.as_f64() else {
-                    return Err(resolver::Error::Custom("Number must have convert to f64".into()));
-                };
-    };
+fn pow(vl: f64, pw: f64) -> f64 {
+    vl.powf(pw)
 }
 
-fn sqrt(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.sqrt().into())
+fn abs(f: f64) -> f64 {
+    f.abs()
 }
 
-fn pow(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(vl, v, 0, 2);
-    get_arguments!(pw, v, 1, 2);
-    get_f64!(vl, vl);
-    get_f64!(pw, pw);
-    Ok(vl.powf(pw).into())
+fn exp(f: f64) -> f64 {
+    f.exp()
+}
+fn exp2(f: f64) -> f64 {
+    f.exp2()
+}
+fn ln(f: f64) -> f64 {
+    f.ln()
+}
+fn log(vl: f64, base: f64) -> f64 {
+    vl.log(base)
 }
 
-fn abs(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.abs().into())
+fn cbrt(f: f64) -> f64 {
+    f.cbrt()
 }
 
-fn exp(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.exp().into())
-}
-fn exp2(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.exp2().into())
-}
-fn ln(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.ln().into())
-}
-fn log(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(vl, v, 0, 2);
-    get_arguments!(base, v, 1, 2);
-    get_f64!(vl, vl);
-    get_f64!(base, base);
-    Ok(vl.log(base).into())
+fn sin(f: f64) -> f64 {
+    f.sin()
 }
 
-fn cbrt(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.cbrt().into())
+fn cos(f: f64) -> f64 {
+    f.cos()
 }
 
-fn sin(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.sin().into())
+fn tan(f: f64) -> f64 {
+    f.tan()
+}
+fn hypot(vl: f64, base: f64) -> f64 {
+    vl.hypot(base)
 }
 
-fn cos(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.cos().into())
-}
-
-fn tan(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(v, v, 0, 1);
-    get_f64!(f, v);
-    Ok(f.tan().into())
-}
-fn hypot(v: Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error> {
-    get_arguments!(vl, v, 0, 2);
-    get_arguments!(base, v, 1, 2);
-    get_f64!(vl, vl);
-    get_f64!(base, base);
-    Ok(vl.hypot(base).into())
-}
-
-type ResolverFunc = fn(Vec<resolver::Value>) -> Result<resolver::Value, resolver::Error>;
-
-const MATH_FUNCTIONS: &[(&str, ResolverFunc)] = &[
-    ("sqrt", sqrt),
-    ("pow", pow),
-    ("abs", abs),
-    ("exp", exp),
-    ("exp2", exp2),
-    ("ln", ln),
-    ("log", log),
-    ("cbrt", cbrt),
-    ("sin", sin),
-    ("cos", cos),
-    ("tan", tan),
-    ("hypot", hypot),
-];
-
-pub fn add_math(e: resolver::Expr) -> resolver::Expr {
-    let mut e = e;
-    for (name, f) in MATH_FUNCTIONS {
-        e = e.const_function(*name, *f);
-    }
-    e
+pub fn add_math(e: &mut rhai::Engine) {
+    e.register_fn("sqrt", sqrt)
+        .register_fn("pow", pow)
+        .register_fn("abs", abs)
+        .register_fn("exp", exp)
+        .register_fn("exp2", exp2)
+        .register_fn("ln", ln)
+        .register_fn("log", log)
+        .register_fn("cbrt", cbrt)
+        .register_fn("sin", sin)
+        .register_fn("cos", cos)
+        .register_fn("tan", tan)
+        .register_fn("hypot", hypot);
 }
 //Before const func: Take time: 42.08s
 //After : Take time: 40.24s
 //Rc after: Take time: 28.45s
+//Rhai call convert: Take time: 14.17s 

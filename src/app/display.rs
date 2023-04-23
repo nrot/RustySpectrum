@@ -1,7 +1,6 @@
 use clap::ValueEnum;
 use rustfft::num_complex::Complex;
 
-pub type ComplexDisplay = resolver::Expr;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Default)]
 pub enum DisplayFun{
@@ -12,12 +11,14 @@ pub enum DisplayFun{
     Custom
 }
 
-pub fn get_display_fun(s: &DisplayFun, custom: String)->ComplexDisplay{
+pub const DISPLAY_FN_NAME: &str = "convert";
+
+pub fn get_display_fun(s: &DisplayFun, custom: String)->String{
     match s {
-        DisplayFun::Norm => resolver::Expr::new("hypot(c.re, c.im)"),
-        DisplayFun::Real => resolver::Expr::new("c.re"),
-        DisplayFun::Image => resolver::Expr::new("c.im"),
-        DisplayFun::Custom => resolver::Expr::new(custom),
+        DisplayFun::Norm => "fn convert(re, im) {hypot(re, im)}".into(),
+        DisplayFun::Real => "fn convert(re, im) {re}".into(),
+        DisplayFun::Image => "fm convert(re, im) {im}".into(),
+        DisplayFun::Custom => custom,
     }
 }
 

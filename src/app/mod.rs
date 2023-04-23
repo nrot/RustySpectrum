@@ -13,13 +13,15 @@ use log::{debug, info, trace, warn};
 
 use crate::app::file_format::FormatError;
 
-use self::{display::ComplexEval, file_format::FileFormat};
+use self::{display::DISPLAY_FN_NAME, file_format::FileFormat};
 
 pub struct App {
     args: Args,
     data: Vec<Complex<f64>>,
     color_fun: colors::ColorFunc,
-    display_fun: display::ComplexDisplay,
+    display_fun: rhai::AST,
+    rhai_engine: rhai::Engine,
+    rhai_scope: rhai::Scope<'static>
 }
 
 #[derive(Parser, Debug)]
@@ -128,16 +130,22 @@ impl App {
     pub fn new() -> Result<Self> {
         let args = Args::parse();
         let color_fun = colors::get_function(&args.colors);
-        let display_fun = emath::add_math(display::get_display_fun(
+        let mut rhai_engine = rhai::Engine::new();
+        emath::add_math(&mut rhai_engine);
+        let display_fun = rhai_engine.compile(display::get_display_fun(
             &args.display_func,
             args.custom_function.clone(),
-        ))
-        .compile()?;
+        ))?;
+        let mut scope = rhai::Scope::new();
+        let _ = rhai_engine.call_fn::<f64>(&mut scope, &display_fun, DISPLAY_FN_NAME, (0.0, 0.0)).unwrap();
+        
         Ok(Self {
             args,
             data: Vec::with_capacity(4096),
             color_fun,
             display_fun,
+            rhai_engine,
+            rhai_scope: scope
         })
     }
 
@@ -248,7 +256,8 @@ impl App {
             #[allow(unused_assignments)]
             let mut tmp = 0.0;
             for c in self.data.iter() {
-                tmp = App::eval_func(self.display_fun.clone(), c)?;
+                // tmp = App::eval_func(self.display_fun.clone(), c)?;
+                tmp = self.rhai_engine.call_fn(&mut self.rhai_scope, &self.display_fun, DISPLAY_FN_NAME, (c.re, c.im)).unwrap();
                 if tmp < mn {
                     mn = tmp;
                 }
@@ -275,7 +284,8 @@ impl App {
         for (i, c) in self.data.iter_mut().enumerate() {
             c.re -= self.args.fft_clamp_min;
             c.im -= self.args.fft_clamp_min;
-            v = App::eval_func(self.display_fun.clone(), c)?;
+            // v = App::eval_func(self.display_fun.clone(), c)?;
+            v = self.rhai_engine.call_fn(&mut self.rhai_scope, &self.display_fun, DISPLAY_FN_NAME, (c.re, c.im)).unwrap();
             //.clamp(self.args.fft_clamp_min, self.args.fft_clamp_max);
             let mut x = (i % self.args.fft_size) as u32;
             let y = (i / self.args.fft_size) as u32;
@@ -294,16 +304,5 @@ impl App {
 
         img.save_with_format(self.args.output.clone(), image::ImageFormat::Png)?;
         Ok(())
-    }
-
-    #[inline(always)]
-    fn eval_func(display_fun: resolver::Expr, c: &Complex<f64>) -> Result<f64> {
-        match emath::add_math(display_fun).value("c", ComplexEval::from(*c)).exec()? {
-            resolver::Value::Number(v) => match v.as_f64() {
-                Some(v) => Ok(v),
-                None => Err(resolver::Error::Custom("Number must have convert to f64".into()).into()),
-            },
-            _ => Err(resolver::Error::ExpectedNumber.into()),
-        }
     }
 }
